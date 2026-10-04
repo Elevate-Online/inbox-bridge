@@ -21,7 +21,7 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 
-	"google-multi-auth/internal/config"
+	"inbox-bridge/internal/config"
 )
 
 // ClientCredentials holds a Google OAuth "Desktop app" client ID/secret.
@@ -34,8 +34,8 @@ type ClientCredentials struct {
 // The Claude Desktop extension (manifest.json) sets these from the Client ID
 // and Client secret the user types into the extension's settings.
 const (
-	EnvClientID     = "GMA_CLIENT_ID"
-	EnvClientSecret = "GMA_CLIENT_SECRET"
+	EnvClientID     = "INBOX_BRIDGE_CLIENT_ID"
+	EnvClientSecret = "INBOX_BRIDGE_CLIENT_SECRET"
 )
 
 // credentialsFromEnv returns the client from the environment, or nil if

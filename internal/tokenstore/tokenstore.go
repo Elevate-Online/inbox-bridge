@@ -12,7 +12,7 @@ import (
 
 	"golang.org/x/oauth2"
 
-	"google-multi-auth/internal/config"
+	"inbox-bridge/internal/config"
 )
 
 // ListAccounts returns the emails of all connected accounts, sorted, based

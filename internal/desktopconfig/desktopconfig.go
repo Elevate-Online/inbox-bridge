@@ -1,4 +1,4 @@
-// Package desktopconfig registers google-multi-auth as an MCP server inside
+// Package desktopconfig registers inbox-bridge as an MCP server inside
 // the Claude Desktop app's own config file, preserving anything already
 // there.
 package desktopconfig
@@ -36,7 +36,7 @@ func ConfigPath() (string, error) {
 	}
 }
 
-// Register adds (or updates) the "google-multi-auth" entry under
+// Register adds (or updates) the "inbox-bridge" entry under
 // mcpServers in Claude Desktop's config file, pointing at binaryPath with no
 // arguments (the binary defaults to serving MCP over stdio). Any other keys
 // or servers already present in the file are preserved. If the file exists
@@ -62,7 +62,10 @@ func Register(binaryPath string) error {
 		servers = map[string]any{}
 	}
 
-	servers["google-multi-auth"] = map[string]any{
+	// Drop the entry written under the tool's old name (google-multi-auth,
+	// before v0.3.0) so Claude Desktop doesn't load two copies.
+	delete(servers, "google-multi-auth")
+	servers["inbox-bridge"] = map[string]any{
 		"command": binaryPath,
 	}
 	cfg["mcpServers"] = servers

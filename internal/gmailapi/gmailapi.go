@@ -14,9 +14,9 @@ import (
 	"google.golang.org/api/gmail/v1"
 	"google.golang.org/api/option"
 
-	"google-multi-auth/internal/config"
-	"google-multi-auth/internal/oauthflow"
-	"google-multi-auth/internal/tokenstore"
+	"inbox-bridge/internal/config"
+	"inbox-bridge/internal/oauthflow"
+	"inbox-bridge/internal/tokenstore"
 )
 
 // MessageSummary is the compact view of a message returned by search.

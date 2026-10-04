@@ -1,4 +1,4 @@
-// Package cli implements the google-multi-auth command-line subcommands:
+// Package cli implements the inbox-bridge command-line subcommands:
 // interactive setup, listing connected accounts, and removing one.
 package cli
 
@@ -11,9 +11,9 @@ import (
 
 	"golang.org/x/term"
 
-	"google-multi-auth/internal/desktopconfig"
-	"google-multi-auth/internal/oauthflow"
-	"google-multi-auth/internal/tokenstore"
+	"inbox-bridge/internal/desktopconfig"
+	"inbox-bridge/internal/oauthflow"
+	"inbox-bridge/internal/tokenstore"
 )
 
 // Setup walks the user through connecting one or more Gmail accounts and

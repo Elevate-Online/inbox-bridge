@@ -1,7 +1,7 @@
 @echo off
 setlocal
 
-set "BINARY=%~dp0bin\google-multi-auth-windows-amd64.exe"
+set "BINARY=%~dp0bin\inbox-bridge-windows-amd64.exe"
 
 if not exist "%BINARY%" (
 	echo Error: expected binary not found at %BINARY% 1>&2

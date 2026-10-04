@@ -1,4 +1,4 @@
-module google-multi-auth
+module inbox-bridge
 
 go 1.26.6
 

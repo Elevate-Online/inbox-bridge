@@ -1,11 +1,14 @@
-# google-multi-auth
+# Inbox Bridge
 
 Connect more than one Gmail inbox to Claude Desktop, as a local MCP server.
+
+*Formerly google-multi-auth. Accounts connected under the old name carry
+over automatically.*
 
 This is a single, self-contained Go binary. There is nothing to install to
 use it -- no Node, no Go, no package manager. Prebuilt binaries for macOS,
 Linux, and Windows are attached to each
-[GitHub Release](https://github.com/Elevate-Online/google-multi-auth/releases/latest);
+[GitHub Release](https://github.com/Elevate-Online/inbox-bridge/releases/latest);
 only someone changing the code needs Go installed.
 
 ## Install in Claude Desktop (Mac and Windows)
@@ -23,8 +26,8 @@ settings.
    4. [Create an OAuth client](https://console.cloud.google.com/apis/credentials)
       of type **Desktop app**. Keep the Client ID and Client secret.
 2. **Install the extension.** Download
-   [`google-multi-auth.mcpb`](https://github.com/Elevate-Online/google-multi-auth/releases/latest/download/google-multi-auth.mcpb)
-   and double-click it. Claude Desktop opens an install dialog: click
+   [`inbox-bridge.mcpb`](https://github.com/Elevate-Online/inbox-bridge/releases/latest/download/inbox-bridge.mcpb)
+   and double-click it. Claude Desktop opens an install dialog for Inbox Bridge: click
    Install and paste in the Client ID and Client secret.
 3. **Connect your inboxes.** In a new chat, ask Claude to "add my Gmail
    account." A Google sign-in page opens in your browser; pick the account
@@ -34,20 +37,20 @@ Then ask something like "Search my work inbox for unread mail from this
 week." To disconnect an inbox, ask Claude to remove it.
 
 To change the Client ID or secret later: Claude Desktop, Settings,
-Extensions, google-multi-auth.
+Extensions, Inbox Bridge.
 
 ## Manual setup (terminal)
 
 For Linux, or if you'd rather register the server yourself.
 
 1. Download the zip for your machine from the
-   [latest release](https://github.com/Elevate-Online/google-multi-auth/releases/latest):
+   [latest release](https://github.com/Elevate-Online/inbox-bridge/releases/latest):
 
    | Machine | Zip |
    |---|---|
-   | Any Mac (Apple silicon or Intel) | `google-multi-auth-macos.zip` |
-   | Windows | `google-multi-auth-windows-amd64.zip` |
-   | Linux | `google-multi-auth-linux-amd64.zip` or `-linux-arm64.zip` |
+   | Any Mac (Apple silicon or Intel) | `inbox-bridge-macos.zip` |
+   | Windows | `inbox-bridge-windows-amd64.zip` |
+   | Linux | `inbox-bridge-linux-amd64.zip` or `-linux-arm64.zip` |
 
    The single-chip Mac zips (`-darwin-arm64`, `-darwin-amd64`) are there too
    if you want the smaller download.
@@ -55,7 +58,7 @@ For Linux, or if you'd rather register the server yourself.
    `SHA256SUMS` in the same release lets you check the download:
    `shasum -a 256 -c SHA256SUMS --ignore-missing`.
 
-2. Unzip it and move the `google-multi-auth` folder somewhere permanent (your
+2. Unzip it and move the `inbox-bridge` folder somewhere permanent (your
    home folder is fine, not Downloads). Setup registers the binary's current
    location with Claude Desktop, so if you move or delete the folder later,
    the Gmail tools stop loading until you run setup again from the new
@@ -65,18 +68,18 @@ For Linux, or if you'd rather register the server yourself.
    downloaded copy from running. Clear the download flag on the folder:
 
    ```sh
-   xattr -dr com.apple.quarantine ~/google-multi-auth
+   xattr -dr com.apple.quarantine ~/inbox-bridge
    ```
 
    (Adjust the path if you put the folder somewhere else.) If you skip this,
-   macOS shows "Apple could not verify google-multi-auth-darwin-arm64 is free
+   macOS shows "Apple could not verify inbox-bridge-darwin-arm64 is free
    of malware" with only Done and Move to Trash. Click Done, then open System
    Settings, Privacy & Security, scroll down and click **Open Anyway**.
 
 4. Run setup from inside the folder:
 
    ```sh
-   cd ~/google-multi-auth
+   cd ~/inbox-bridge
    ./setup
    ```
 
@@ -100,8 +103,8 @@ Restart Claude Desktop afterwards to pick up the new tools.
 To add or remove accounts later, run `./setup` again (add), or:
 
 ```sh
-./bin/google-multi-auth-<your-platform> list
-./bin/google-multi-auth-<your-platform> remove someone@gmail.com
+./bin/inbox-bridge-<your-platform> list
+./bin/inbox-bridge-<your-platform> remove someone@gmail.com
 ```
 
 (`./setup` picks the right binary for your platform automatically; the two
@@ -121,7 +124,7 @@ delete, or modify mail.
 
 ## Where things are stored
 
-Everything lives under `~/.config/google-multi-auth/`, permissioned to your
+Everything lives under `~/.config/inbox-bridge/`, permissioned to your
 user only:
 
 - `client.json` -- your Google OAuth client ID/secret (manual setup only;

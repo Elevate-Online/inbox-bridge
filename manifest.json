@@ -1,32 +1,32 @@
 {
   "manifest_version": "0.3",
-  "name": "google-multi-auth",
-  "display_name": "google-multi-auth",
-  "version": "0.2.0",
+  "name": "inbox-bridge",
+  "display_name": "Inbox Bridge",
+  "version": "0.3.0",
   "description": "Connect more than one Gmail inbox to Claude. Read-only: Claude can search and read your mail, never send or change it.",
-  "long_description": "Claude's built-in Gmail connector links one Google account at a time. google-multi-auth connects as many Gmail inboxes as you like, so Claude can search a personal and a work account in the same chat. It asks Google for read-only access, keeps your sign-ins on your own computer, and talks to Google directly. After installing, ask Claude to \"add my Gmail account\" and sign in to each inbox in your browser.",
+  "long_description": "Claude's built-in Gmail connector links one Google account at a time. Inbox Bridge connects as many Gmail inboxes as you like, so Claude can search a personal and a work account in the same chat. It asks Google for read-only access, keeps your sign-ins on your own computer, and talks to Google directly. After installing, ask Claude to \"add my Gmail account\" and sign in to each inbox in your browser.",
   "author": {
     "name": "Elevate Online",
     "url": "https://www.claudetraining.com"
   },
   "homepage": "https://www.claudetraining.com/claude-multiple-gmail-accounts",
-  "documentation": "https://github.com/Elevate-Online/google-multi-auth#readme",
-  "support": "https://github.com/Elevate-Online/google-multi-auth/issues",
+  "documentation": "https://github.com/Elevate-Online/inbox-bridge#readme",
+  "support": "https://github.com/Elevate-Online/inbox-bridge/issues",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Elevate-Online/google-multi-auth"
+    "url": "https://github.com/Elevate-Online/inbox-bridge"
   },
   "license": "MIT",
   "keywords": ["gmail", "email", "google", "multiple accounts"],
   "server": {
     "type": "binary",
-    "entry_point": "server/google-multi-auth",
+    "entry_point": "server/inbox-bridge",
     "mcp_config": {
-      "command": "${__dirname}/server/google-multi-auth",
+      "command": "${__dirname}/server/inbox-bridge",
       "args": ["serve"],
       "env": {
-        "GMA_CLIENT_ID": "${user_config.client_id}",
-        "GMA_CLIENT_SECRET": "${user_config.client_secret}"
+        "INBOX_BRIDGE_CLIENT_ID": "${user_config.client_id}",
+        "INBOX_BRIDGE_CLIENT_SECRET": "${user_config.client_secret}"
       }
     }
   },

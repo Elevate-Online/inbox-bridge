@@ -11,9 +11,9 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"google-multi-auth/internal/gmailapi"
-	"google-multi-auth/internal/oauthflow"
-	"google-multi-auth/internal/tokenstore"
+	"inbox-bridge/internal/gmailapi"
+	"inbox-bridge/internal/oauthflow"
+	"inbox-bridge/internal/tokenstore"
 )
 
 // ListAccountsInput is empty: list_accounts takes no arguments.
@@ -76,7 +76,7 @@ func Serve() error {
 	}
 
 	server := mcp.NewServer(&mcp.Implementation{
-		Name:    "google-multi-auth",
+		Name:    "inbox-bridge",
 		Version: "v1.0.0",
 	}, nil)
 
@@ -136,7 +136,7 @@ func addAccountHandler(_ context.Context, _ *mcp.CallToolRequest, _ AddAccountIn
 	}
 	if creds == nil {
 		return nil, AddAccountOutput{}, fmt.Errorf("no Google Client ID and Client secret are set. " +
-			"In Claude Desktop, open Settings, then Extensions, then google-multi-auth, and paste them in")
+			"In Claude Desktop, open Settings, then Extensions, then Inbox Bridge, and paste them in")
 	}
 
 	pending, err := oauthflow.StartAuthFlow(creds)

@@ -1,4 +1,4 @@
-// Command google-multi-auth is both an MCP stdio server exposing Gmail read
+// Command inbox-bridge is both an MCP stdio server exposing Gmail read
 // tools across multiple connected Google accounts, and a CLI for connecting
 // those accounts and registering itself with Claude Desktop.
 package main
@@ -7,11 +7,11 @@ import (
 	"fmt"
 	"os"
 
-	"google-multi-auth/internal/cli"
-	"google-multi-auth/internal/mcpserver"
+	"inbox-bridge/internal/cli"
+	"inbox-bridge/internal/mcpserver"
 )
 
-const usage = `Usage: google-multi-auth [command]
+const usage = `Usage: inbox-bridge [command]
 
 Commands:
   (none) | serve   Run the MCP server over stdio (default; used by Claude Desktop)
