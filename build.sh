@@ -40,6 +40,16 @@ build linux amd64
 build linux arm64
 build windows amd64
 
+# One zip for every Mac, holding both binaries. ./setup picks the right one
+# from uname, so a reader never has to know which chip their Mac has. This is
+# the file the website's download button serves on macOS.
+stage=$(mktemp -d)
+mkdir -p "${stage}/google-multi-auth/bin"
+cp setup README.md LICENSE "${stage}/google-multi-auth/"
+cp bin/google-multi-auth-darwin-arm64 bin/google-multi-auth-darwin-amd64 "${stage}/google-multi-auth/bin/"
+(cd "$stage" && zip -qr -X "${ROOT}/dist/google-multi-auth-macos.zip" google-multi-auth)
+rm -rf "$stage"
+
 (cd dist && shasum -a 256 *.zip > SHA256SUMS)
 
 echo "Done. Binaries are in bin/, release zips and SHA256SUMS in dist/."

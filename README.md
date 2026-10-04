@@ -15,10 +15,12 @@ only someone changing the code needs Go installed.
 
    | Machine | Zip |
    |---|---|
-   | Mac with Apple silicon (M1 or later) | `google-multi-auth-darwin-arm64.zip` |
-   | Intel Mac | `google-multi-auth-darwin-amd64.zip` |
+   | Any Mac (Apple silicon or Intel) | `google-multi-auth-macos.zip` |
    | Windows | `google-multi-auth-windows-amd64.zip` |
    | Linux | `google-multi-auth-linux-amd64.zip` or `-linux-arm64.zip` |
+
+   The single-chip Mac zips (`-darwin-arm64`, `-darwin-amd64`) are there too
+   if you want the smaller download.
 
    `SHA256SUMS` in the same release lets you check the download:
    `shasum -a 256 -c SHA256SUMS --ignore-missing`.
