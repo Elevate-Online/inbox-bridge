@@ -1,0 +1,40 @@
+#!/bin/sh
+# Runs the prebuilt google-multi-auth binary for this machine's platform in
+# "setup" mode. Works no matter what directory it's invoked from, and
+# requires no installed toolchain -- just the checked-in bin/ binaries.
+set -e
+
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+
+os=$(uname -s)
+arch=$(uname -m)
+
+case "$os" in
+	Darwin) os="darwin" ;;
+	Linux) os="linux" ;;
+	*)
+		echo "Error: no prebuilt google-multi-auth binary for platform '$os'." >&2
+		echo "Supported platforms: Darwin, Linux (and Windows via setup.bat)." >&2
+		exit 1
+		;;
+esac
+
+case "$arch" in
+	arm64|aarch64) arch="arm64" ;;
+	x86_64) arch="amd64" ;;
+	*)
+		echo "Error: no prebuilt google-multi-auth binary for architecture '$arch'." >&2
+		echo "Supported architectures: arm64, amd64." >&2
+		exit 1
+		;;
+esac
+
+BINARY="$SCRIPT_DIR/bin/google-multi-auth-${os}-${arch}"
+
+if [ ! -x "$BINARY" ]; then
+	echo "Error: expected binary not found at $BINARY" >&2
+	echo "Download a release zip, or run ./build.sh to build from source." >&2
+	exit 1
+fi
+
+exec "$BINARY" setup "$@"
