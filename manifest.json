@@ -1,0 +1,58 @@
+{
+  "manifest_version": "0.3",
+  "name": "google-multi-auth",
+  "display_name": "google-multi-auth",
+  "version": "0.2.0",
+  "description": "Connect more than one Gmail inbox to Claude. Read-only: Claude can search and read your mail, never send or change it.",
+  "long_description": "Claude's built-in Gmail connector links one Google account at a time. google-multi-auth connects as many Gmail inboxes as you like, so Claude can search a personal and a work account in the same chat. It asks Google for read-only access, keeps your sign-ins on your own computer, and talks to Google directly. After installing, ask Claude to \"add my Gmail account\" and sign in to each inbox in your browser.",
+  "author": {
+    "name": "Elevate Online",
+    "url": "https://www.claudetraining.com"
+  },
+  "homepage": "https://www.claudetraining.com/claude-multiple-gmail-accounts",
+  "documentation": "https://github.com/Elevate-Online/google-multi-auth#readme",
+  "support": "https://github.com/Elevate-Online/google-multi-auth/issues",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Elevate-Online/google-multi-auth"
+  },
+  "license": "MIT",
+  "keywords": ["gmail", "email", "google", "multiple accounts"],
+  "server": {
+    "type": "binary",
+    "entry_point": "server/google-multi-auth",
+    "mcp_config": {
+      "command": "${__dirname}/server/google-multi-auth",
+      "args": ["serve"],
+      "env": {
+        "GMA_CLIENT_ID": "${user_config.client_id}",
+        "GMA_CLIENT_SECRET": "${user_config.client_secret}"
+      }
+    }
+  },
+  "tools": [
+    { "name": "add_account", "description": "Connect another Gmail account by signing in to Google in your browser" },
+    { "name": "list_accounts", "description": "List the connected Gmail accounts" },
+    { "name": "search_messages", "description": "Search one connected inbox with Gmail search syntax" },
+    { "name": "get_message", "description": "Read the full content of one message" },
+    { "name": "remove_account", "description": "Disconnect a Gmail account and delete its saved sign-in" }
+  ],
+  "compatibility": {
+    "platforms": ["darwin", "win32"]
+  },
+  "user_config": {
+    "client_id": {
+      "type": "string",
+      "title": "Google Client ID",
+      "description": "From the OAuth client you created in Google Cloud Console. It ends in .apps.googleusercontent.com.",
+      "required": true
+    },
+    "client_secret": {
+      "type": "string",
+      "title": "Google Client secret",
+      "description": "Shown next to the Client ID when you created the OAuth client.",
+      "sensitive": true,
+      "required": true
+    }
+  }
+}

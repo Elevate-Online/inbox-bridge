@@ -8,7 +8,37 @@ Linux, and Windows are attached to each
 [GitHub Release](https://github.com/Elevate-Online/google-multi-auth/releases/latest);
 only someone changing the code needs Go installed.
 
-## Setup
+## Install in Claude Desktop (Mac and Windows)
+
+No terminal needed. Three steps, about 10 minutes, most of it in Google's
+settings.
+
+1. **Create your Google sign-in client.** Google requires every app that
+   reads Gmail to have its own. It's free:
+   1. [Create a Google Cloud project](https://console.cloud.google.com/projectcreate). Any name works.
+   2. [Enable the Gmail API](https://console.cloud.google.com/apis/library/gmail.googleapis.com) for it.
+   3. [Set up the OAuth consent screen](https://console.cloud.google.com/apis/credentials/consent)
+      as External, add the `gmail.readonly` scope, and add **every Gmail
+      address you plan to connect** as a test user.
+   4. [Create an OAuth client](https://console.cloud.google.com/apis/credentials)
+      of type **Desktop app**. Keep the Client ID and Client secret.
+2. **Install the extension.** Download
+   [`google-multi-auth.mcpb`](https://github.com/Elevate-Online/google-multi-auth/releases/latest/download/google-multi-auth.mcpb)
+   and double-click it. Claude Desktop opens an install dialog: click
+   Install and paste in the Client ID and Client secret.
+3. **Connect your inboxes.** In a new chat, ask Claude to "add my Gmail
+   account." A Google sign-in page opens in your browser; pick the account
+   and allow read access. Repeat for each inbox.
+
+Then ask something like "Search my work inbox for unread mail from this
+week." To disconnect an inbox, ask Claude to remove it.
+
+To change the Client ID or secret later: Claude Desktop, Settings,
+Extensions, google-multi-auth.
+
+## Manual setup (terminal)
+
+For Linux, or if you'd rather register the server yourself.
 
 1. Download the zip for your machine from the
    [latest release](https://github.com/Elevate-Online/google-multi-auth/releases/latest):
@@ -79,20 +109,23 @@ commands above need you to name it yourself.)
 
 ## Tools
 
+- `add_account` -- connect another Gmail account through a browser sign-in.
 - `list_accounts` -- the connected Gmail addresses.
 - `search_messages` -- search one account's inbox with Gmail search syntax
   (`from:`, `is:unread`, `in:inbox`, etc.).
 - `get_message` -- fetch the full content of one message by ID.
+- `remove_account` -- disconnect an account and delete its saved sign-in.
 
-All read-only (`gmail.readonly` scope) -- this cannot send, delete, or modify
-mail.
+Gmail access is read-only (`gmail.readonly` scope) -- this cannot send,
+delete, or modify mail.
 
 ## Where things are stored
 
 Everything lives under `~/.config/google-multi-auth/`, permissioned to your
 user only:
 
-- `client.json` -- your Google OAuth client ID/secret.
+- `client.json` -- your Google OAuth client ID/secret (manual setup only;
+  the extension keeps them in Claude Desktop's settings instead).
 - `tokens/<email>.json` -- one refresh token per connected account.
 
 Nothing leaves your machine except direct calls to Google's API.

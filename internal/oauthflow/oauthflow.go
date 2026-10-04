@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
 	"time"
 
 	"golang.org/x/oauth2"
@@ -29,9 +30,35 @@ type ClientCredentials struct {
 	ClientSecret string `json:"client_secret"`
 }
 
-// LoadClientCredentials reads the stored client credentials. If the file
-// does not exist it returns (nil, nil) rather than an error.
+// Environment variables that supply the OAuth client instead of client.json.
+// The Claude Desktop extension (manifest.json) sets these from the Client ID
+// and Client secret the user types into the extension's settings.
+const (
+	EnvClientID     = "GMA_CLIENT_ID"
+	EnvClientSecret = "GMA_CLIENT_SECRET"
+)
+
+// credentialsFromEnv returns the client from the environment, or nil if
+// either variable is empty or still an unsubstituted "${user_config...}"
+// placeholder (what an extension passes when the field was left blank).
+func credentialsFromEnv() *ClientCredentials {
+	id := strings.TrimSpace(os.Getenv(EnvClientID))
+	secret := strings.TrimSpace(os.Getenv(EnvClientSecret))
+	if id == "" || secret == "" || strings.HasPrefix(id, "${") || strings.HasPrefix(secret, "${") {
+		return nil
+	}
+	return &ClientCredentials{ClientID: id, ClientSecret: secret}
+}
+
+// LoadClientCredentials returns the OAuth client from the environment if set
+// (the Claude Desktop extension), otherwise from the stored client.json (the
+// setup wizard). If neither exists it returns (nil, nil) rather than an
+// error.
 func LoadClientCredentials() (*ClientCredentials, error) {
+	if creds := credentialsFromEnv(); creds != nil {
+		return creds, nil
+	}
+
 	path, err := config.ClientFile()
 	if err != nil {
 		return nil, err
@@ -84,19 +111,31 @@ type userinfoResponse struct {
 	Email string `json:"email"`
 }
 
-// RunAuthFlow drives one full interactive OAuth loopback flow: it opens a
-// local listener, sends the user to Google's consent screen (printing the
-// URL and attempting to launch a browser), waits for the redirect, exchanges
-// the code for a token, and discovers the account's email address. It
-// returns the connected email and the resulting token.
-func RunAuthFlow(creds *ClientCredentials) (string, *oauth2.Token, error) {
+// PendingAuth is an OAuth loopback flow that is listening for Google's
+// redirect. URL is the consent page to send the user to; Wait blocks until
+// the user finishes (or abandons) it.
+type PendingAuth struct {
+	URL  string
+	wait func() (string, *oauth2.Token, error)
+}
+
+// Wait blocks until the user completes the consent page, it fails, or three
+// minutes pass, and returns the connected email and token.
+func (p *PendingAuth) Wait() (string, *oauth2.Token, error) {
+	return p.wait()
+}
+
+// StartAuthFlow opens a local listener and prepares Google's consent URL,
+// without printing anything or opening a browser. It never writes to stdout,
+// so it is safe to call from inside the MCP server, where stdout is the
+// protocol channel.
+func StartAuthFlow(creds *ClientCredentials) (*PendingAuth, error) {
 	ctx := context.Background()
 
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
-		return "", nil, fmt.Errorf("binding loopback listener: %w", err)
+		return nil, fmt.Errorf("binding loopback listener: %w", err)
 	}
-	defer listener.Close()
 
 	port := listener.Addr().(*net.TCPAddr).Port
 	redirectURL := fmt.Sprintf("http://127.0.0.1:%d", port)
@@ -111,7 +150,8 @@ func RunAuthFlow(creds *ClientCredentials) (string, *oauth2.Token, error) {
 
 	state, err := generateState()
 	if err != nil {
-		return "", nil, fmt.Errorf("generating OAuth state: %w", err)
+		listener.Close()
+		return nil, fmt.Errorf("generating OAuth state: %w", err)
 	}
 
 	authURL := conf.AuthCodeURL(
@@ -130,7 +170,7 @@ func RunAuthFlow(creds *ClientCredentials) (string, *oauth2.Token, error) {
 			return
 		}
 		if errParam := r.URL.Query().Get("error"); errParam != "" {
-			fmt.Fprintln(w, "Authorization failed, you can close this tab.")
+			fmt.Fprintln(w, "Gmail was not connected. You can close this tab and try again.")
 			select {
 			case errCh <- fmt.Errorf("authorization error: %s", errParam):
 			default:
@@ -139,14 +179,14 @@ func RunAuthFlow(creds *ClientCredentials) (string, *oauth2.Token, error) {
 		}
 		code := r.URL.Query().Get("code")
 		if code == "" {
-			fmt.Fprintln(w, "Authorization failed, you can close this tab.")
+			fmt.Fprintln(w, "Gmail was not connected. You can close this tab and try again.")
 			select {
 			case errCh <- fmt.Errorf("no code in callback"):
 			default:
 			}
 			return
 		}
-		fmt.Fprintln(w, "Authorization complete, you can close this tab.")
+		fmt.Fprintln(w, "Gmail connected. You can close this tab and go back to Claude.")
 		select {
 		case codeCh <- code:
 		default:
@@ -155,33 +195,52 @@ func RunAuthFlow(creds *ClientCredentials) (string, *oauth2.Token, error) {
 	srv := &http.Server{Handler: mux}
 	go srv.Serve(listener)
 
-	fmt.Println("Open this URL to authorize (opening your browser automatically):")
-	fmt.Println(authURL)
-	openBrowser(authURL)
+	wait := func() (string, *oauth2.Token, error) {
+		defer listener.Close()
 
-	var code string
-	select {
-	case code = <-codeCh:
-	case err := <-errCh:
+		var code string
+		select {
+		case code = <-codeCh:
+		case err := <-errCh:
+			shutdown(srv)
+			return "", nil, err
+		case <-time.After(3 * time.Minute):
+			shutdown(srv)
+			return "", nil, fmt.Errorf("timed out waiting for authorization")
+		}
 		shutdown(srv)
+
+		tok, err := conf.Exchange(ctx, code)
+		if err != nil {
+			return "", nil, fmt.Errorf("exchanging authorization code: %w", err)
+		}
+
+		email, err := discoverEmail(ctx, conf, tok)
+		if err != nil {
+			return "", nil, fmt.Errorf("discovering account email: %w", err)
+		}
+
+		return email, tok, nil
+	}
+
+	return &PendingAuth{URL: authURL, wait: wait}, nil
+}
+
+// RunAuthFlow drives one full interactive OAuth loopback flow for the setup
+// wizard: it starts the flow, prints the consent URL (to stderr) and tries
+// to open a browser, then waits for the user. It returns the connected email
+// and the resulting token.
+func RunAuthFlow(creds *ClientCredentials) (string, *oauth2.Token, error) {
+	pending, err := StartAuthFlow(creds)
+	if err != nil {
 		return "", nil, err
-	case <-time.After(3 * time.Minute):
-		shutdown(srv)
-		return "", nil, fmt.Errorf("timed out waiting for authorization")
-	}
-	shutdown(srv)
-
-	tok, err := conf.Exchange(ctx, code)
-	if err != nil {
-		return "", nil, fmt.Errorf("exchanging authorization code: %w", err)
 	}
 
-	email, err := discoverEmail(ctx, conf, tok)
-	if err != nil {
-		return "", nil, fmt.Errorf("discovering account email: %w", err)
-	}
+	fmt.Fprintln(os.Stderr, "Open this URL to authorize (opening your browser automatically):")
+	fmt.Fprintln(os.Stderr, pending.URL)
+	OpenBrowser(pending.URL)
 
-	return email, tok, nil
+	return pending.Wait()
 }
 
 // generateState returns a random per-flow value used as the OAuth "state"
@@ -262,15 +321,17 @@ func fetchGmailProfileEmail(client *http.Client) (string, error) {
 	return profile.EmailAddress, nil
 }
 
-// openBrowser attempts to open url in the user's default browser. Errors
-// are deliberately ignored -- the printed URL is always the fallback.
-func openBrowser(url string) {
+// OpenBrowser attempts to open url in the user's default browser. Errors
+// are deliberately ignored -- the URL is always shown as a fallback.
+func OpenBrowser(url string) {
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
 	case "darwin":
 		cmd = exec.Command("open", url)
 	case "windows":
-		cmd = exec.Command("cmd", "/c", "start", "", url)
+		// Not "cmd /c start": cmd treats the & between query parameters as
+		// a command separator and truncates the consent URL.
+		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
 	default:
 		cmd = exec.Command("xdg-open", url)
 	}

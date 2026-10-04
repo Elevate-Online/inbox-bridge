@@ -6,11 +6,13 @@ package mcpserver
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"google-multi-auth/internal/gmailapi"
+	"google-multi-auth/internal/oauthflow"
 	"google-multi-auth/internal/tokenstore"
 )
 
@@ -45,6 +47,26 @@ type GetMessageOutput struct {
 	Message gmailapi.MessageDetail `json:"message" jsonschema:"Full content of the requested message"`
 }
 
+// AddAccountInput is empty: add_account takes no arguments. Which account
+// gets connected is whichever one the user picks on Google's sign-in page.
+type AddAccountInput struct{}
+
+// AddAccountOutput tells Claude what happened and what to tell the user.
+type AddAccountOutput struct {
+	Status    string `json:"status" jsonschema:"What happened, in plain language, to relay to the user"`
+	SignInURL string `json:"signInUrl,omitempty" jsonschema:"Google sign-in link, in case the browser did not open by itself"`
+}
+
+// RemoveAccountInput names the account to disconnect.
+type RemoveAccountInput struct {
+	Account string `json:"account" jsonschema:"Email address of the connected Gmail account to disconnect"`
+}
+
+// RemoveAccountOutput reports whether the account was found and removed.
+type RemoveAccountOutput struct {
+	Status string `json:"status" jsonschema:"What happened, in plain language, to relay to the user"`
+}
+
 // Serve registers the Gmail tools and runs the MCP server on stdio, blocking
 // until the client disconnects.
 func Serve() error {
@@ -68,7 +90,7 @@ func Serve() error {
 
 func accountsBlurb(accounts []string) string {
 	if len(accounts) == 0 {
-		return "No accounts connected yet -- run the setup command."
+		return "No accounts connected yet -- use add_account to connect one."
 	}
 	return fmt.Sprintf("Connected accounts: %s.", strings.Join(accounts, ", "))
 }
@@ -90,6 +112,70 @@ func registerTools(server *mcp.Server, accounts []string) {
 		Name:        "get_message",
 		Description: "Fetch the full content (including body) of one Gmail message by ID from a connected account. " + blurb,
 	}, getMessageHandler)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name: "add_account",
+		Description: "Connect another Gmail account. Opens a Google sign-in page in the user's browser and returns straight away; " +
+			"the account is connected once the user finishes signing in there. Tell the user to pick the account in the browser, " +
+			"then call list_accounts to confirm it appears. Use this whenever the user asks to add, connect or link a Gmail account.",
+	}, addAccountHandler)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "remove_account",
+		Description: "Disconnect one Gmail account and delete its saved sign-in from this computer. " + blurb,
+	}, removeAccountHandler)
+}
+
+// addAccountHandler starts Google's sign-in in the user's browser and
+// finishes it in the background. It returns immediately rather than holding
+// the tool call open for up to three minutes, which a client may time out.
+func addAccountHandler(_ context.Context, _ *mcp.CallToolRequest, _ AddAccountInput) (*mcp.CallToolResult, AddAccountOutput, error) {
+	creds, err := oauthflow.LoadClientCredentials()
+	if err != nil {
+		return nil, AddAccountOutput{}, err
+	}
+	if creds == nil {
+		return nil, AddAccountOutput{}, fmt.Errorf("no Google Client ID and Client secret are set. " +
+			"In Claude Desktop, open Settings, then Extensions, then google-multi-auth, and paste them in")
+	}
+
+	pending, err := oauthflow.StartAuthFlow(creds)
+	if err != nil {
+		return nil, AddAccountOutput{}, err
+	}
+
+	go func() {
+		email, tok, err := pending.Wait()
+		if err != nil {
+			log.Printf("add_account: %v", err)
+			return
+		}
+		if err := tokenstore.SaveToken(email, tok); err != nil {
+			log.Printf("add_account: saving token for %s: %v", email, err)
+			return
+		}
+		log.Printf("add_account: connected %s", email)
+	}()
+
+	oauthflow.OpenBrowser(pending.URL)
+
+	return nil, AddAccountOutput{
+		Status: "A Google sign-in page has opened in the browser. Pick the Gmail account to connect and allow read access. " +
+			"If Google warns that the app is unverified or in testing, that is expected for this tool. " +
+			"The sign-in page stays valid for three minutes. If no browser window opened, use the sign-in link.",
+		SignInURL: pending.URL,
+	}, nil
+}
+
+func removeAccountHandler(_ context.Context, _ *mcp.CallToolRequest, input RemoveAccountInput) (*mcp.CallToolResult, RemoveAccountOutput, error) {
+	found, err := tokenstore.RemoveAccount(input.Account)
+	if err != nil {
+		return nil, RemoveAccountOutput{}, err
+	}
+	if !found {
+		return nil, RemoveAccountOutput{Status: fmt.Sprintf("%s is not connected.", input.Account)}, nil
+	}
+	return nil, RemoveAccountOutput{Status: fmt.Sprintf("Disconnected %s and deleted its saved sign-in.", input.Account)}, nil
 }
 
 func listAccountsHandler(_ context.Context, _ *mcp.CallToolRequest, _ ListAccountsInput) (*mcp.CallToolResult, ListAccountsOutput, error) {

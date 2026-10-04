@@ -50,6 +50,21 @@ cp bin/google-multi-auth-darwin-arm64 bin/google-multi-auth-darwin-amd64 "${stag
 (cd "$stage" && zip -qr -X "${ROOT}/dist/google-multi-auth-macos.zip" google-multi-auth)
 rm -rf "$stage"
 
-(cd dist && shasum -a 256 *.zip > SHA256SUMS)
+# Claude Desktop extension (.mcpb, a zip with manifest.json at its root).
+# Double-clicking it opens Claude Desktop's install dialog, which asks for the
+# Google Client ID and secret declared in manifest.json. One file serves every
+# Mac and Windows: a universal macOS binary (lipo) plus the Windows .exe,
+# both named server/google-multi-auth so the manifest needs one command.
+# lipo ships with macOS (Xcode command line tools), so build this on a Mac.
+stage=$(mktemp -d)
+mkdir -p "${stage}/server"
+cp manifest.json LICENSE README.md "${stage}/"
+lipo -create -output "${stage}/server/google-multi-auth" \
+	bin/google-multi-auth-darwin-arm64 bin/google-multi-auth-darwin-amd64
+cp bin/google-multi-auth-windows-amd64.exe "${stage}/server/google-multi-auth.exe"
+(cd "$stage" && zip -qr -X "${ROOT}/dist/google-multi-auth.mcpb" .)
+rm -rf "$stage"
+
+(cd dist && shasum -a 256 *.zip *.mcpb > SHA256SUMS)
 
 echo "Done. Binaries are in bin/, release zips and SHA256SUMS in dist/."
